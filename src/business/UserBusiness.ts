@@ -1,5 +1,5 @@
 import { UserDatabase } from "../database/UserDatabase"
-import { GetAllOutputDTO, LoginInputDTO, LoginOutputDTO, SignupInputDTO, SignupOutputDTO } from "../dtos/userDTO";
+import { DeleteDTO, GetAllOutputDTO, LoginInputDTO, LoginOutputDTO, SignupInputDTO, SignupOutputDTO } from "../dtos/userDTO";
 import { BadRequestError } from "../errors/BadRequestError";
 import { NotFoundError } from "../errors/NotFoundError";
 import { User } from "../models/User";
@@ -137,5 +137,38 @@ export class UserBusiness {
         })
 
         return output
+    }
+
+    public deleteUser = async (
+        input: DeleteDTO
+    ): Promise<void> => {
+        const { idToDelete, token } = input
+
+        if (token === undefined) {
+            throw new BadRequestError("token ausente")
+        }
+
+        const payload = this.tokenManager.getPayload(token)
+
+        if (payload === null) {
+            throw new BadRequestError("token inválido")
+        }
+
+        const userDB = await this.userDatabase.findById(idToDelete)
+
+        if (!userDB) {
+            throw new NotFoundError("'id' não encontrado")
+        }
+
+        const Name = payload.id
+
+        if (
+            payload.role !== USER_ROLES.ADMIN
+            && userDB.name !== Name
+        ) {
+            throw new BadRequestError("somente quem criou a playlist pode deletá-la")
+        }
+
+        await this.userDatabase.delete(idToDelete)
     }
 }
